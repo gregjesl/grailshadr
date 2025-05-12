@@ -87,7 +87,7 @@ async fn main() {
 
     let mut handles = vec![];
 
-    for file in files {
+    for file in files.clone() {
         let handle = task::spawn(async move {
             execute(file.0, file.1).await;
         });
@@ -97,4 +97,20 @@ async fn main() {
     for handle in handles {
         handle.await.unwrap();
     }
+
+    // Write the available features to a Rust source file
+    let out_dir = std::env::var("OUT_DIR").unwrap();
+    let dest_path = Path::new(&out_dir).join("available.rs");
+    let mut dest_file = fs::File::create(&dest_path).expect("Failed to create available.rs");
+    write!(dest_file, "pub const AVAILABLE_SHADRS: &[&str] = &[").expect("Failed to write to available.rs");
+    let mut available_features = vec![];
+    
+    for (_, varname) in files {
+        // write!(dest_file, "use {};", varname).expect("Failed to write to available.rs");
+        available_features.push(varname);
+    }
+    for feature in available_features {
+        write!(dest_file, "{} as &str,", feature).expect("Failed to write to available.rs");
+    }
+    write!(dest_file, "];").expect("Failed to write to available.rs");
 }
